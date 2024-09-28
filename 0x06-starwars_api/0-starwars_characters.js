@@ -1,41 +1,30 @@
-#!/usr/bin/node
-/**
- * Wrapper function for request object that allows it
- * to work with async and await
- * @param   {String} url - site url
- * @returns {Promise}    - promise object that resolves
- *                         with parsed JSON response
- *                         and rejects with the request error.
- */
-function makeRequest (url) {
-  const request = require('request');
-  return new Promise((resolve, reject) => {
-    request.get(url, (error, response, body) => {
-      if (error) reject(error);
-      else resolve(JSON.parse(body));
-    });
-  });
-}
+#!/usr/bin/env node
 
-/**
- * Entry point - makes requests to Star Wars API
- * for movie info based movie ID passed as a CLI parameter.
- * Retrieves movie character info then prints their names
- * in order of appearance in the initial response.
- */
-async function main () {
-  const args = process.argv;
+// Script to fetch and display characters of a Star Wars movie based on Movie ID using the Star Wars API
 
-  if (args.length < 3) return;
+const request = require('request');
 
-  const movieUrl = 'https://swapi-api.alx-tools.com/api/films/' + args[2];
-  const movie = await makeRequest(movieUrl);
+const movieId = process.argv[2];
+const url = `https://swapi.dev/api/films/${movieId}/`;
 
-  if (movie.characters === undefined) return;
-  for (const characterUrl of movie.characters) {
-    const character = await makeRequest(characterUrl);
-    console.log(character.name);
-  }
-}
+// Make a request to fetch movie details
+request(url, (error, response, body) => {
+    if (!error && response.statusCode === 200) {
+        const film = JSON.parse(body);
+        const characters = film.characters;
 
-main();
+        // Fetch details of each character in the movie
+        characters.forEach(characterUrl => {
+            request(characterUrl, (err, resp, characterBody) => {
+                if (!err && resp.statusCode === 200) {
+                    const character = JSON.parse(characterBody);
+                    console.log(character.name);
+                } else {
+                    console.log('Error fetching character details');
+                }
+            });
+        });
+    } else {
+        console.log('Error fetching movie details');
+    }
+});
